@@ -31,15 +31,15 @@ public class ApplicationTemplate
     
     protected static class AppFrame extends JFrame
     {
-        private Dimension canvasSize = new Dimension(800, 600);
+        private Dimension canvasSize = new Dimension(1360, 768);
 
-        private AppPanel wwjPanel;
+        private TwiTerraAppPanel wwjPanel;
         private LayerPanel layerPanel;
         private StatisticsPanel statsPanel;
 
         public AppFrame()
         {
-            this.initialize(true, true, false);
+            this.initialize(false, false, false);
         }
 
         public AppFrame(boolean includeStatusBar, boolean includeLayerPanel, boolean includeStatsPanel)
@@ -50,7 +50,7 @@ public class ApplicationTemplate
         private void initialize(boolean includeStatusBar, boolean includeLayerPanel, boolean includeStatsPanel)
         {
             // Create the WorldWindow.
-            this.wwjPanel = new AppPanel(this.canvasSize, includeStatusBar);
+            this.wwjPanel = new TwiTerraAppPanel(this.canvasSize, includeStatusBar);
             this.wwjPanel.setPreferredSize(canvasSize);
 
             // Put the pieces together.
@@ -99,7 +99,7 @@ public class ApplicationTemplate
             return canvasSize;
         }
 
-        public AppPanel getWwjPanel()
+        public TwiTerraAppPanel getWwjPanel()
         {
             return wwjPanel;
         }

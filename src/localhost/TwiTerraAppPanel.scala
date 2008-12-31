@@ -1,20 +1,3 @@
-/**
- * Jumping Tweets v2
- * by Steven Lehrburger - 10/22/2008 - NYU/ITP/ICM/Shiffman
- * (new name coming soon!)
- * 
- * (partial) copyright (C) 2001, 2008 United States Government as represented by the Administrator of the National Aeronautics and Space Administration. All Rights Reserved.
- * 
- * Build on NASAs' World Wind open source globe/mapping project and Twitter's Search Atom feed API. 
- * 
- * Currently, pulls 15 most recent and then constantly all subsequent tweets that contain "Retweeting".
- * It then displays them in an applet on at random latitude and longitudes on the globe using Annotations,
- * with Polylines between that location and NYC. This is very, very far from finished, and more information
- * can be found on my blog here - http://lehrblogger.com/?p=135 and http://lehrblogger.com/?p=186 and
- * and http://lehrblogger.com/?p=188
- * 
- * Credit to Jorge Ortiz for assistance getting a lof of basic Scala and World Wind things working.
- */
 package localhost
 
 import gov.nasa.worldwind.util.StatusBar
@@ -46,50 +29,36 @@ import org.jdesktop.animation.timing.{Animator, TimingTargetAdapter}
 import org.jdesktop.animation.timing.interpolation.PropertySetter
 
 
+class TwiTerraAppPanel (val canvasSize: Dimension, val includeStatusBar: Boolean) extends JPanel
+{
+  var wwd: WorldWindowGLCanvas = new WorldWindowGLCanvas()												// random stuff I do not full understand for the DrawingContext, for the lines and Annotations
+  var initLayerCount = 0;
+    
+  var statusBar: StatusBar = new StatusBar();
+  if (includeStatusBar) {
+  //    var statusBar = new StatusBar();
+    add(statusBar, BorderLayout.PAGE_END);
+    statusBar.setEventSource(wwd);
+  }
+    
+  //parent(new BorderLayout);
 
-class TwiTerraAppPanel extends JApplet
-{    
-    var wwd: WorldWindowGLCanvas = new WorldWindowGLCanvas()								// stuff to get the WW working - heavily based on the basic WWJApplet example
-    var statusBar: StatusBar = new StatusBar()
-    var context = new DrawContextImpl														// random stuff I do not full understand for the DrawingContext, for the lines and Annotations
-    var initLayerCount = 0;
-    
-    val globeActor = actor {
-        loop {
-          react {
-              case newTweet: Tweet => displayTweetTree(newTweet)
-          }
-       }
-    }
-    val tweetHandler = new TweetHandler(globeActor)
-    val twitterActor = actor { 
-      loop {
-        react { 
-          case "force next tweet" => tweetHandler.sendTweet
-     //     case "wait for animations" => tweetHandler.startWaiting
-          case "starting one animation" => tweetHandler.incrementAnimationCount
-          case "finished one animation" => tweetHandler.decrementAnimationCount
-     //     case "otherwise ready" => tweetHandler.sendTweetIfReady
-        } 
-      } 
-    } 	
-    
-    override def init()
-    {
-      this.getContentPane().add(this.wwd, BorderLayout.CENTER)							    // Create World Window GL Canvas
+  wwd.setPreferredSize(canvasSize);
+
+  // Create the default model as described in the current worldwind properties.
+  var m: Model = (WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME)).asInstanceOf[Model];
+  wwd.setModel(m);
+
+  // Setup a select listener for the worldmap click-and-go feature
+  //wwd.addSelectListener(new ClickAndGoSelectListener(this.getWwd(), WorldMapLayer.class));
+
+  add(this.wwd, BorderLayout.CENTER)							    // Create World Window GL Canvas
                                                                                             // Create the default model as described in the current worldwind properties.
-	  var m: Model = WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME).asInstanceOf[Model]
-      var context = wwd.getSceneController.getDrawContext
-	  this.wwd.setModel(m)
-      context.setModel(m)
-      context.setSurfaceGeometry(new SectorGeometryList) 									// spent a long time pouring through docs to find stuff for the DrawingContext that worked
-      context.setGLContext(wwd.getContext)
+  var context = wwd.getSceneController.getDrawContext
+  context.setModel(m)
+  context.setSurfaceGeometry(new SectorGeometryList) 									// spent a long time pouring through docs to find stuff for the DrawingContext that worked
+  context.setGLContext(wwd.getContext)
    
-	  this.getContentPane().add(statusBar, BorderLayout.PAGE_END)					        // Add the status bar
-	
-	  this.statusBar.setEventSource(this.wwd)										        // Forward events to the status bar to provide the cursor position info.
-
-      
       //var tweetLayer: Layer = new RenderableLayer;
       var layers: scala.List[Layer] = wwd.getModel.getLayers.toList
       layers = layers.filter { l =>
@@ -116,21 +85,27 @@ class TwiTerraAppPanel extends JApplet
       initLayerCount = layers.length
       wwd.getModel.setLayers(new LayerList(layers.toArray))
         
+    val globeActor = actor {
+        loop {
+          react {
+              case newTweet: Tweet => displayTweetTree(newTweet)
+          }
+       }
+    }
+    val tweetHandler = new TweetHandler(globeActor)
+    val twitterActor = actor { 
+      loop {
+        react { 
+          case "force next tweet" => tweetHandler.sendTweet
+          case "starting one animation" => tweetHandler.incrementAnimationCount
+          case "finished one animation" => tweetHandler.decrementAnimationCount
+        } 
+      } 
+    }
+    
+   twitterActor ! "force next tweet"
+     
       
-      twitterActor ! "force next tweet"
-    }
-
-    def positionsAreEqual(pos1: Position, pos2: Position) = {
-      ((pos1.getLatitude  == pos2.getLatitude ) && 
-       (pos1.getLongitude == pos2.getLongitude) && 
-       (pos1.getElevation == pos2.getElevation)   )
-    }
-    
-    override def stop() {
-        WorldWind.shutDown();																 // Shutdown World Wind
-    }
-    
-    
     val duration = 3000
     var minDepth = 2
     var avgDist = 1000
@@ -196,7 +171,7 @@ class TwiTerraAppPanel extends JApplet
     }
     
     def updateTreeLayers = {
-      val maxNumTrees = 3;
+      val maxNumTrees = 5;
       var initLayers: scala.List[Layer] = wwd.getModel.getLayers.toList
       var finalLayers: scala.List[Layer] = initLayers.dropRight(initLayers.length - initLayerCount)
       var renderLayers: scala.List[Layer] = Nil
@@ -246,6 +221,15 @@ class TwiTerraAppPanel extends JApplet
     }
     
     
+    
+  def getWwd: WorldWindowGLCanvas = {
+     return wwd;
+  }
+
+  def getStatusBar: StatusBar = {
+    return statusBar;
+  }
+    
     class LineEventHandler(line: AnimatedAnnotatedLine, childTweet: Tweet, followThis: Boolean, globeAnno: GlobeAnnotation, layer: RenderableLayer, color: Color) extends TimingTargetAdapter
     {
       override def begin = {
@@ -259,7 +243,7 @@ class TwiTerraAppPanel extends JApplet
         displayTweet(childTweet, followThis, globeAnno, layer, color)
         twitterActor ! "finished one animation"
       } 
-    }	
+    }	    
 }
 
 
