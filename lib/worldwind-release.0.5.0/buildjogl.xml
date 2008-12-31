@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--$Id: buildjogl.xml 5210 2008-04-29 21:43:09Z dcollins $-->
+<project name="jogl-setup" default="jogl-setup" basedir=".">
+    <!-- JOGL properties -->
+    <property name="jogl.dir" value="${basedir}/JOGL"/>
+    <property name="jogl.site.url" value="http://download.java.net/media/jogl/builds/nightly"/>
+    <property name="jogl.version.url" value="${jogl.site.url}/version.txt"/>
+    <!-- JOGL distrubution parameters for Mac OS X -->
+    <property name="jogl.runtime.name.mac" value="${jogl.version}-macosx-universal.zip"/>
+    <property name="jogl.runtime.url.mac" value="${jogl.site.url}/${jogl.runtime.name.mac}"/>
+    <property name="jogl.runtime.dest.mac" value="${jogl.dir}/${jogl.runtime.name.mac}"/>
+    <!-- JOGL distrubution parameters for Windows -->
+    <property name="jogl.runtime.name.win" value="${jogl.version}-windows-i586.zip"/>
+    <property name="jogl.runtime.url.win" value="${jogl.site.url}/${jogl.runtime.name.win}"/>
+    <property name="jogl.runtime.dest.win" value="${jogl.dir}/${jogl.runtime.name.win}"/>
+    <!-- JOGL distribution parameters for Linux-->
+    <property name="jogl.runtime.name.linux" value="${jogl.version}-linux-i586.zip"/>
+    <property name="jogl.runtime.url.linux" value="${jogl.site.url}/${jogl.runtime.name.linux}"/>
+    <property name="jogl.runtime.dest.linux" value="${jogl.dir}/${jogl.runtime.name.linux}"/>
+
+    <!-- Set up the JOGL library -->
+    <target name="jogl-setup" description="Set up the JOGL library">
+        <mkdir dir="${jogl.dir}"/>
+        <mkdir dir="${jogl.dir}/jogl_runtime"/>
+        <get src="${jogl.version.url}" dest="${jogl.dir}/version.txt"/>
+        <loadfile property="jogl.version.number" srcfile="${jogl.dir}/version.txt"/>
+        <property name="jogl.version" value="jogl-${jogl.version.number}"/>
+        <get src="${jogl.site.url}/${jogl.version}-macosx-universal.zip" dest="${jogl.dir}/jogl-runtime.zip"
+             verbose="on"/>
+        <unzip src="${jogl.dir}/jogl-runtime.zip" dest="${jogl.dir}/jogl_runtime" overwrite="true"
+               encoding="native-encoding"/>
+        <get src="${jogl.site.url}/${jogl.version}-linux-i586.zip" dest="${jogl.dir}/jogl-runtime.zip" verbose="on"/>
+        <unzip src="${jogl.dir}/jogl-runtime.zip" dest="${jogl.dir}/jogl_runtime" overwrite="true"
+               encoding="native-encoding"/>
+        <get src="${jogl.site.url}/${jogl.version}-windows-i586.zip" dest="${jogl.dir}/jogl-runtime.zip" verbose="on"/>
+        <unzip src="${jogl.dir}/jogl-runtime.zip" dest="${jogl.dir}/jogl_runtime" overwrite="true"
+               encoding="native-encoding"/>
+        <move flatten="true" overwrite="true" todir="${basedir}">
+            <fileset dir="${jogl.dir}/jogl_runtime">
+                <include name="**/lib/*"/>
+            </fileset>
+        </move>
+        <delete dir="${jogl.dir}"/>
+    </target>
+</project>

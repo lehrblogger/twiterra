@@ -1,0 +1,14 @@
+#Fat Jar Configuration File
+#Wed Dec 10 17:43:58 EST 2008
+onejar.license.required=true
+manifest.classpath=
+manifest.removesigners=true
+onejar.checkbox=false
+jarname=TwiTerra_ScalaRun_fat.jar
+manifest.mergeall=true
+manifest.mainclass=localhost.ApplicationTemplate
+manifest.file=<createnew>
+jarname.isextern=false
+onejar.expand=
+excludes=
+includes=

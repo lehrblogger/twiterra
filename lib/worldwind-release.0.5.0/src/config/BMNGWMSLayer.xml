@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<restorableState>
+    <stateObject name="gov.nasa.worldwind.avkey.NumEmptyLevels">0</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.ImageFormat">image/dds</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.DataCacheNameKey">Earth/BMNG/BMNG(Shaded + Bathymetry) Tiled - Version
+        1.1 - 5.2004
+    </stateObject>
+    <stateObject
+        name="gov.nasa.worldwind.avkey.ServiceURLKey">
+        http://worldwind35.arc.nasa.gov:8080/wms?SERVICE=WMS&amp;</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.Title">Blue Marble 05/2004</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.NumLevels">5</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.FormatSuffixKey">.dds</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.LevelZeroTileDelta.Latitude">36.0</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.LevelZeroTileDelta.Longitude">36.0</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.DatasetNameKey">bmng200405</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.TileHeightKey">512</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.TileWidthKey">512</stateObject>
+    <stateObject name="gov.nasa.worldwind.avkey.LayerNames">bmng200405</stateObject>
+    <stateObject name="gov.nasa.worldwind.avKey.Sector.MinLatitude">-90.0</stateObject>
+    <stateObject name="gov.nasa.worldwind.avKey.Sector.MaxLatitude">90.0</stateObject>
+    <stateObject name="gov.nasa.worldwind.avKey.Sector.MinLongitude">-180.0</stateObject>
+    <stateObject name="gov.nasa.worldwind.avKey.Sector.MaxLongitude">180.0</stateObject>
+    <stateObject name="wms.UseTransparentTextures">true</stateObject>
+    <stateObject name="wms.LayerName">BlueMarbleNG 05/2004</stateObject>
+    <stateObject name="wms.LayerEnabled">true</stateObject>
+    <stateObject name="avlist">
+        <stateObject name="gov.nasa.worldwind.avkey.DisplayName">BlueMarble 05/2004</stateObject>
+        <stateObject name="gov.nasa.worldwind.avkey.URLReadTimeout">30000</stateObject>
+    </stateObject>
+</restorableState>

@@ -1,0 +1,555 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--$Id: build.xml 5270 2008-05-01 21:56:15Z dcollins $-->
+<project name="worldwind" default="worldwind.jarfile" basedir=".">
+<description>
+    Build script for the World Wind Java API.
+    
+</description>
+    <!--
+    ====================================================================================================
+    Global World Wind build properties.
+    These properties are referenced throughout the buildfile.
+    -->
+    <property name="worldwind.src.dir" value="${basedir}/src"/>
+    <property name="worldwind.doc.dir" value="${basedir}/doc"/>
+    <property name="worldwind.classes.dir" value="${basedir}/classes"/>
+    <property name="worldwind.jarfile" value="worldwind.jar"/>
+
+    <!--
+    ====================================================================================================
+    JOGL setup target.
+    Installs the latest JOGL runtime Jar files and native libraries to the base directory.
+    The JOGL runtime Jar files are required to compile the World Wind source.
+    The JOGL native libraries are required to run all World Wind demos and World Wind based applications.
+    -->
+    <property name="jogl.buildfile" value="buildjogl.xml"/>
+    <target name="jogl-setup"
+            description="Set up the JOGL library">
+        <ant dir="${basedir}" antfile="${jogl.buildfile}" target="jogl-setup" inheritAll="false">
+            <property name="dest.dir" location="${basedir}"/>
+        </ant>
+    </target>
+
+    <!--
+    ====================================================================================================
+    Jar signing support target.
+    The Jar to sign is specified by the parameter "jarfile".
+    Keystore information is read from a keystore properties file ("keystore.properties").
+    If this file exists, and its contents specify a valid keystore, the specified jar is signed.
+    The keystore properties file must be a Java properties file, with at least the following properties
+    defined:
+        keystore.file
+        keystore.alias
+        keystore.storepass
+    These properties coincide with the jarsigner properties of the same name.
+    -->
+    <property name="keystore.properties" value="${basedir}/keystore.properties"/>
+    <target name="jarsigner" depends="jarsigner-check,keystore-setup,keystore-missing" if="keystore.available">
+        <signjar jar="${jarfile}"
+                 keystore="${keystore.file}"
+                 alias="${keystore.alias}" 
+                 storepass="${keystore.storepass}"/>
+    </target>
+    <target name="jarsigner-check">
+        <fail unless="jarfile" message="Jar file not specified. Set the property 'jarfile'."/>
+    </target>
+    <target name="keystore-missing" unless="keystore.available">
+<echo level="info">Jar '${jarfile}' will NOT be signed.
+The keystore file is unavailable or improperly specified.
+To enable Jar file signing:
+1. Create a plain text file:
+    ${keystore.properties}
+2. Give it the following contents:
+    keystore.file=[myKeystore]
+    keystore.alias=[myAlais]
+    keystore.storepass=[myPassword]
+3. If you don't have a keystore, you can create a temporary one
+(use [myPassword] as the password):
+    keytool -genkey -Keystore ./[myKeystore] -alias [myAlias]
+    keytool -selfcert -Keystore ./[myKeystore] -alias [myAlias]
+For help with keystores or signing Jar files, see
+http://java.sun.com/j2se/1.5.0/docs/guide/security/SecurityToolsSummary.html
+(to suppress this message, enable the quiet option: -quiet, -q)</echo>
+    </target>
+    <target name="keystore-setup">
+        <property file="${keystore.properties}"/>
+        <condition property="keystore.available">
+            <and>
+                <isset property="keystore.file"/>
+                <isset property="keystore.alias"/>
+                <isset property="keystore.storepass"/>
+                <available file="${keystore.file}"/>
+            </and>
+        </condition>
+    </target>
+
+    <!--
+    ====================================================================================================
+    World Wind build targets.
+    Compiles the World Wind source, creates World Wind API documentation, and builds World Wind Jar packages.
+    -->
+    <property name="basicdemo.jarfile" value="BasicDemo.jar"/>
+    <property name="basicdemo.classname" value="gov.nasa.worldwind.examples.ApplicationTemplate"/>
+    <!-- Invokes all World Wind build targets. -->
+    <target name="build" depends="compile,
+                                  javadocs,
+                                  worldwind.jarfile,
+                                  basicdemo.jarfile"/>
+    <!-- Compiles the World Wind library. -->
+    <target name="compile"
+            description="Compile the World Wind source">
+        <mkdir dir="${worldwind.classes.dir}"/>
+        <javac destdir="${worldwind.classes.dir}" fork="true"
+               excludes="gov/nasa/worldwind/util/csw/**">
+            <!-- Note: The package gov.nasa.worldwind.util.csw.* has been excluded until problems are fixed. -->
+            <src path="${worldwind.src.dir}"/>
+            <classpath>
+                <pathelement location="jogl.jar"/>
+                <pathelement location="gluegen-rt.jar"/>
+                <pathelement location="${java.home}/lib/plugin.jar"/>
+            </classpath>
+        </javac>
+    </target>
+    <!-- Generates the World Wind API documentation. -->
+    <target name="javadocs" depends="clean.javadocs"
+            description="Generate the World Wind API documentation">
+        <javadoc packagenames="gov.nasa.worldwind.*" defaultexcludes="yes"
+                 splitindex="true" protected="true" nodeprecated="true" version="false" author="false" use="true"
+                 overview="${worldwind.src.dir}/overview.html"
+                 windowtitle="NASA World Wind" doctitle="NASA World Wind API" header="NASA World Wind"
+                 destdir="${worldwind.doc.dir}">
+            <sourcepath path="${worldwind.src.dir}"/>
+            <excludepackage name="gov.nasa.worldwind.formats.*"/>
+            <excludepackage name="gov.nasa.worldwind.util.csw.*"/>
+            <classpath>
+                <pathelement path="jogl.jar"/>
+                <pathelement path="${java.home}/lib/plugin.jar"/>
+            </classpath>
+            <link href="http://java.sun.com/j2se/1.5.0/docs/api"/>
+            <link href="http://download.java.net/media/jogl/builds/nightly/javadoc_public/"/>
+        </javadoc>
+    </target>
+    <!-- Builds the World Wind library Jar file. -->
+    <target name="worldwind.jarfile" depends="compile"
+            description="Build the World Wind library">
+        <jar jarfile="${basedir}/${worldwind.jarfile}">
+            <manifest>
+                <attribute name="Class-Path" value="jogl.jar gluegen-rt.jar"/>
+                <attribute name="Main-Class" value="${basicdemo.classname}"/>
+            </manifest>
+            <fileset dir="${worldwind.classes.dir}">
+                <include name="gov/nasa/**/*.class"/>
+                <exclude name="gov/nasa/worldwind/examples/applet/**/*.class"/>
+                <exclude name="gov/nasa/worldwind/util/csw/**/*.class"/>
+                <type type="file"/>
+            </fileset>
+            <!-- Note: SARApp depends on html files in the same directory as it's classes. -->
+            <fileset dir="${worldwind.src.dir}">
+                <include name="images/**"/>
+                <include name="config/**"/>
+                <include name="gov/nasa/worldwind/applications/sar/**/*.html"/>
+                <include name="gov/nasa/worldwind/util/**/*.properties"/>
+                <type type="file"/>
+            </fileset>
+        </jar>
+    </target>
+    <!-- Builds the BasicDemo application Jar file. -->
+    <target name="basicdemo.jarfile" depends="worldwind.jarfile"
+            description="Build the BasicDemo application">
+        <jar jarfile="${basedir}/${basicdemo.jarfile}">
+            <manifest>
+                <attribute name="Class-Path" value="${worldwind.jarfile}"/>
+                <attribute name="Main-Class" value="${basicdemo.classname}"/>
+            </manifest>
+            <fileset dir="${worldwind.classes.dir}">
+                <include name="gov/nasa/worldwind/examples/ApplicationTemplate.class"/>
+                <include name="gov/nasa/worldwind/examples/ApplicationTemplate$*.class"/>
+                <type type="file"/>
+            </fileset>
+        </jar>
+    </target>
+    <!-- Runs the BasicDemo application. -->
+    <target name="run.basicdemo"
+            description="Run the BasicDemo application">
+        <available file="${basedir}/${worldwind.jarfile}" property="worldwind.jarfile.available"/>
+        <fail unless="worldwind.jarfile.available"
+              message="Failed to run BasicDemo application. Cannot find World Wind library.
+To create the World Wind libarary Jar file run: ant worldwind.jarfile"/>
+        <java classname="${basicdemo.classname}" fork="true" maxmemory="512m">
+            <classpath>
+                <pathelement location="${worldwind.jarfile}"/>
+            </classpath>
+        </java>
+    </target>
+    <!-- Deletes files and directories created by the World Wind build targets. -->
+    <target name="clean.classes">
+        <delete dir="${worldwind.classes.dir}"/>
+    </target>
+    <target name="clean.javadocs">
+        <delete dir="${worldwind.doc.dir}"/>
+    </target>
+    <target name="clean.worldwind.jarfile">
+        <delete file="${basedir}/${worldwind.jarfile}"/>
+    </target>
+    <target name="clean.basicdemo.jarfile">
+        <delete file="${basedir}/${basicdemo.jarfile}"/>
+    </target>
+    <target name="clean.build" depends="clean.classes,
+                                        clean.javadocs,
+                                        clean.worldwind.jarfile,
+                                        clean.basicdemo.jarfile"/>
+
+    <!--
+    ====================================================================================================
+    Release targets.
+    Builds the World Wind SDK release, and creates the release archive.
+    -->
+    <property name="worldwind.release.dir" value="${basedir}/worldwind-release"/>
+    <property name="worldwind.release.zipfile" value="${basedir}/worldwind-release.zip"/>
+    <!-- Creates the World Wind SDK release directory. -->
+    <target name="worldwind.release" depends="clean.build,
+                                              clean.worldwind.release,
+                                              build"
+            description="Create the World Wind SDK release">
+        <mkdir dir="${worldwind.release.dir}"/>
+        <copy todir="${worldwind.release.dir}">
+            <fileset dir="${basedir}">
+                <include name="build.xml"/>
+                <include name="buildjogl.xml"/>
+                <include name="JavaWebStartTemplate.jnlp"/>
+                <include name="logging.properties"/>
+                <include name="README.txt"/>
+                <include name="run-demo.bash"/>
+                <include name="*.html"/>
+                <include name="${worldwind.jarfile}"/>
+                <include name="${basicdemo.jarfile}"/>
+                <include name="jogl.jar"/>
+                <include name="gluegen-rt.jar"/>
+                <include name="*.jnilib"/>
+                <include name="*.dll"/>
+                <include name="*.so"/>
+                <include name="src/*.html"/>
+                <include name="src/config/**"/>
+                <include name="src/images/**"/>
+                <include name="src/gov/nasa/**"/>
+                <exclude name="src/gov/nasa/worldwind/util/csw/**"/>
+                <include name="doc/**"/>
+                <include name="demodata/**"/>
+                <exclude name="demodata/SeqSarAppTk1.csv"/>
+                <exclude name="demodata/KaweahRiverTrack.xml"/>
+                <type type="file"/>
+            </fileset>
+        </copy>
+        <antcall target="jarsigner">
+                <param name="jarfile" value="${worldwind.release.dir}/${worldwind.jarfile}"/>
+        </antcall>
+        <antcall target="jarsigner">
+                <param name="jarfile" value="${worldwind.release.dir}/${basicdemo.jarfile}"/>
+        </antcall>
+        <chmod file="${worldwind.release.dir}/run-demo.bash" perm="ugo+rwx"/>
+    </target>
+    <!-- Packages the World Wind SDK release components into a zip file. -->
+    <target name="worldwind.release.zipfile"
+            description="Package the World Wind SDK release">
+        <zip destfile="${worldwind.release.zipfile}">
+            <fileset dir="${worldwind.release.dir}"/>
+        </zip>
+    </target>
+    <!-- Deletes the World Wind SDK release directory and zip file. -->
+    <target name="clean.worldwind.release">
+        <delete dir="${worldwind.release.dir}"/>
+        <delete file="${worldwind.release.zipfile}"/>
+    </target>
+
+    <!--
+    ====================================================================================================
+    Applet Targets.
+    Builds the World Wind Applet Jar packages, and builds the World Wind Applet release.
+    -->
+    <property name="applet.dir" value="${worldwind.src.dir}/gov/nasa/worldwind/examples/applet"/>
+    <property name="applet.jarfile" value="WWJApplet.jar"/>
+    <property name="appletminimal.jarfile" value="WWJAppletMinimal.jar"/>
+    <property name="applet.release.dir" value="${basedir}/applet-release"/>
+    <property name="applet.release.zipfile" value="${basedir}/applet-release.zip"/>
+    <property name="appletlauncher.url" value="http://download.java.net/media/applet-launcher/applet-launcher.jar"/>
+    <!-- Creates the World Wind Applet library. -->
+    <target name="applet.jarfile" depends="worldwind.jarfile"
+            description="Build the World Wind Applet library">
+        <jar jarfile="${basedir}/${applet.jarfile}">
+            <manifest>
+                <attribute name="Class-Path" value="${worldwind.jarfile}"/>
+                <attribute name="Main-Class" value="gov.nasa.worldwind.examples.applet.WWJApplet"/>
+            </manifest>
+            <fileset dir="${worldwind.classes.dir}">
+                <include name="gov/nasa/worldwind/examples/applet/WWJApplet.class"/>
+                <include name="gov/nasa/worldwind/examples/applet/WWJApplet$*.class"/>
+                <type type="file"/>
+            </fileset>
+        </jar>
+    </target>
+    <!-- Creates the World Wind Minimal-Applet library. -->                            
+    <target name="appletminimal.jarfile" depends="worldwind.jarfile"
+            description="Build the World Wind Minimal-Applet library">
+        <jar jarfile="${basedir}/${appletminimal.jarfile}">
+            <manifest>
+                <attribute name="Class-Path" value="${worldwind.jarfile}"/>
+                <attribute name="Main-Class" value="gov.nasa.worldwind.examples.applet.WWJAppletMinimal"/>
+            </manifest>
+            <fileset dir="${worldwind.classes.dir}">
+                <include name="gov/nasa/worldwind/examples/applet/WWJAppletMinimal.class"/>
+                <include name="gov/nasa/worldwind/examples/applet/WWJAppletMinimal$*.class"/>
+                <type type="file"/>
+            </fileset>
+        </jar>
+    </target>
+    <!--
+    Creates the World Wind Applet release directory. 
+    Before creating a release, create a keystore as follows:
+        keytool -genkey -Keystore ./wwKeystore -alias deployer  (Use NASAWorldWind as the password)
+        keytool -selfcert -Keystore ./wwKeystore -alias deployer
+    Then, create a file with the title "keystore.properties" in the same
+    directory as this build file. Its contents should be as follows:
+        keystore.file=wwKeystore
+        keystore.alias=deployer
+        keystore.storepass=NASAWorldWind
+    -->
+    <target name="applet.release" depends="clean.worldwind.jarfile,
+                                           clean.applet,
+                                           worldwind.jarfile,
+                                           applet.jarfile,
+                                           appletminimal.jarfile"
+            description="Create the World Wind Applet release">
+        <mkdir dir="${applet.release.dir}"/>
+        <copy todir="${applet.release.dir}">
+            <fileset dir="${applet.dir}">
+                <include name="**/*.html"/>
+                <exclude name="package.html"/>
+                <type type="file"/>
+            </fileset>
+            <fileset dir="${basedir}">
+                <include name="${worldwind.jarfile}"/>
+                <include name="${applet.jarfile}"/>
+                <include name="${appletminimal.jarfile}"/>
+                <type type="file"/>
+            </fileset>
+        </copy>
+        <get src="${appletlauncher.url}" dest="${applet.release.dir}/applet-launcher.jar"/>
+        <antcall target="jarsigner">
+            <param name="jarfile" value="${applet.release.dir}/${worldwind.jarfile}"/>
+        </antcall>
+        <antcall target="jarsigner">
+            <param name="jarfile" value="${applet.release.dir}/${applet.jarfile}"/>
+        </antcall>
+        <antcall target="jarsigner">
+            <param name="jarfile" value="${applet.release.dir}/${appletminimal.jarfile}"/>
+        </antcall>
+    </target>
+    <!-- Packages the World Wind Applet release components into a zip file. -->
+    <target name="applet.release.zipfile"
+            description="Package the World Wind Applet release">
+        <zip destfile="${applet.release.zipfile}">
+            <fileset dir="${applet.release.dir}"/>
+        </zip>
+    </target>
+    <!-- Deletes the World Wind Applet files and directories. -->                 
+    <target name="clean.applet.jarfile">
+        <delete file="${applet.jarfile}"/>
+    </target>
+    <target name="clean.appletminimal.jarfile">
+        <delete file="${appletminimal.jarfile}"/>
+    </target>
+    <target name="clean.applet.release">
+        <delete dir="${applet.release.dir}"/>
+        <delete file="${applet.release.zipfile}"/>
+    </target>
+    <target name="clean.applet" depends="clean.applet.jarfile,
+                                         clean.appletminimal.jarfile,
+                                         clean.applet.release"/>
+
+    <!--
+    ====================================================================================================
+    DemoSite targets
+    Builds the World Wind DemoSite release package.
+    WARNING: these targets does not work with the World Wind public release.
+    -->
+    <property name="demosite.dir" value="${basedir}/demosite"/>
+    <property name="demosite.release.dir" value="${basedir}/demosite-release"/>
+    <property name="demosite.release.zipfile" value="${basedir}/demosite-release.zip"/>
+    <available file="${demosite.dir}" property="demosite.available"/>
+    <!-- Creates the World Wind DemoSite release directory.
+         WARNING: this target does not work with the World Wind public release. -->
+    <target name="demosite.release" depends="clean.worldwind.jarfile,
+                                             clean.applet.jarfile,
+                                             clean.appletminimal.jarfile,
+                                             clean.demosite.release,
+                                             worldwind.jarfile,
+                                             applet.jarfile,
+                                             appletminimal.jarfile"
+            description="Create the World Wind DemoSite release">
+        <fail unless="demosite.available"
+              message="DemoSite target does not work with the World Wind public release."/>
+        <mkdir dir="${demosite.release.dir}"/>
+        <copy todir="${demosite.release.dir}">
+            <fileset dir="${demosite.dir}">
+                <include name="**"/>
+                <type type="file"/>
+            </fileset>
+            <fileset dir="${applet.dir}">
+                <include name="**/*.html"/>
+                <exclude name="package.html"/>
+                <type type="file"/>
+            </fileset>
+            <fileset dir="${basedir}">
+                <include name="${worldwind.jarfile}"/>
+                <include name="${applet.jarfile}"/>
+                <include name="${appletminimal.jarfile}"/>
+                <type type="file"/>
+            </fileset>
+        </copy>
+        <get src="${appletlauncher.url}" dest="${demosite.release.dir}/applet-launcher.jar"/>
+        <antcall target="jarsigner">
+            <param name="jarfile" value="${demosite.release.dir}/${worldwind.jarfile}"/>
+        </antcall>
+        <antcall target="jarsigner">
+            <param name="jarfile" value="${demosite.release.dir}/${applet.jarfile}"/>
+        </antcall>
+        <antcall target="jarsigner">
+            <param name="jarfile" value="${demosite.release.dir}/${appletminimal.jarfile}"/>
+        </antcall>
+    </target>
+    <!-- Packages the World Wind Demosite release components into a zip file.
+         WARNING: this target does not work with the World Wind public release. -->
+    <target name="demosite.release.zipfile"
+            description="Package the World Wind DemoSite release">
+        <fail unless="demosite.available"
+              message="DemoSite target does not work with the World Wind public release."/>
+        <zip destfile="${demosite.release.zipfile}">
+            <fileset dir="${demosite.release.dir}"/>
+        </zip>
+    </target>
+    <!-- Deletes the World Wind DemoSite release directory and zip file.
+         WARNING: this target does not work with the World Wind public release. -->
+    <target name="clean.demosite.release">
+        <delete dir="${demosite.release.dir}"/>
+        <delete file="${demosite.release.zipfile}"/>
+    </target>
+
+    <!--
+    ====================================================================================================
+    Clean Targets.
+    Removes any files and directories creating by this build script.
+    -->
+    <target name="clean.all" depends="clean.build,
+                                      clean.worldwind.release,
+                                      clean.applet,
+                                      clean.demosite.release"
+            description="Remove all build-generated files and directories"/>
+
+    <!--
+    ====================================================================================================
+    SAR (Search and Rescue) targets.
+    Creates the World Wind SAR application.
+    These targets do not have corresponding "clean" targets.
+    -->
+    <property name="sarapp.jarfile" value="SARApp.jar"/>
+    <!-- Builds the SAR (Search and Rescue) application Jar file. -->
+    <target name="sarapp.jarfile" depends="compile"
+            description="Build the SAR (Search and Rescue) application">
+        <jar jarfile="${basedir}/${sarapp.jarfile}">
+            <manifest>
+                <attribute name="Class-Path" value="jogl.jar gluegen-rt.jar"/>
+                <attribute name="Main-Class" value="gov.nasa.worldwind.applications.sar.SARApp"/>
+            </manifest>
+            <fileset dir="${worldwind.classes.dir}">
+                <include name="gov/nasa/**/*.class"/>
+                <exclude name="gov/nasa/worldwind/examples/applet/**/*.class"/>
+                <exclude name="gov/nasa/worldwind/util/csw/**/*.class"/>
+                <type type="file"/>
+            </fileset>
+            <fileset dir="${worldwind.src.dir}">
+                <include name="images/**"/>
+                <include name="config/**"/>
+                <include name="gov/nasa/worldwind/applications/sar/**/*.html"/>
+                <include name="gov/nasa/worldwind/util/**/*.properties"/>
+                <type type="file"/>
+            </fileset>
+        </jar>
+        <antcall target="jarsigner">
+            <param name="jarfile" value="${basedir}/${sarapp.jarfile}"/>
+        </antcall>
+    </target>
+    
+    <!--
+    ====================================================================================================
+    Diagnostic Targets.
+    These targets do not have corresponding "clean" targets.
+    WARNING: these targets will not work with the World Wind public release.
+    -->
+    <property name="worldwinddiagnostics.jarfile" value="WorldWindDiagnostics.jar"/>
+    <property name="pathdiagnostics.jarfile" value="PathDiagnostics.jar"/>
+    <property name="gltextureview.jarfile" value="GLTextureView.jar"/>
+    <!-- Creates the WorldWindDiagnostic application Jar file.
+         WARNING: this target does not work with the World Wind public release. -->
+    <target name="worldwinddiagnostics.jarfile" depends="worldwind.jarfile">
+        <available file="${worldwind.classes.dir}/worldwinddiagnostics" property="worldwinddiagnostics.available"/>
+        <fail unless="worldwinddiagnostics.available"
+              message="WorldWindDiagnostics target does not work with the World Wind public release."/>
+        <jar jarfile="${basedir}/${worldwinddiagnostics.jarfile}">
+            <manifest>
+                <attribute name="Class-Path" value="${worldwind.jarfile} jogl.jar gluegen-rt.jar"/>
+                <attribute name="Main-Class" value="worldwinddiagnostics.WorldWindDiagnostics"/>
+            </manifest>
+            <fileset dir="${worldwind.classes.dir}">
+                <include name="worldwinddiagnostics/WorldWindDiagnostics*.class"/>
+                <type type="file"/>
+            </fileset>
+        </jar>
+        <antcall target="jarsigner">
+            <param name="jarfile" value="${basedir}/${worldwinddiagnostics.jarfile}"/>
+        </antcall>
+    </target>
+    <!-- Creates the PathDiagnostics application Jar file.
+         WARNING: this target does not work with the World Wind public release. -->
+    <target name="pathdiagnostics.jarfile" depends="compile">
+        <available file="${worldwind.classes.dir}/worldwinddiagnostics" property="worldwinddiagnostics.available"/>
+        <fail unless="worldwinddiagnostics.available"
+              message="PathDiagnostics target does not work with the World Wind public release."/>
+        <jar jarfile="${basedir}/${pathdiagnostics.jarfile}">
+            <manifest>
+                <attribute name="Main-Class" value="worldwinddiagnostics.PathDiagnostics"/>
+            </manifest>
+            <fileset dir="${worldwind.classes.dir}">
+                <include name="worldwinddiagnostics/PathDiagnostics*.class"/>
+                <type type="file"/>
+            </fileset>
+            <fileset  dir="${worldwind.src.dir}">
+                <include name="config/**"/>
+                <include name="gov/nasa/worldwind/util/**/*.properties"/>
+                <type type="file"/>
+            </fileset>
+        </jar>
+        <antcall target="jarsigner">
+            <param name="jarfile" value="${basedir}/${pathdiagnostics.jarfile}"/>
+        </antcall>
+    </target>
+    <!-- Creates the GLTextureView application Jar file.
+         WARNING: this target does not work with the World Wind public release. -->
+    <target name="gltextureview.jarfile" depends="compile">
+        <available file="${worldwind.classes.dir}/worldwinddiagnostics" property="worldwinddiagnostics.available"/>
+        <fail unless="worldwinddiagnostics.available"
+              message="GLTextureView target does not work with the World Wind public release."/>
+        <jar jarfile="${basedir}/${gltextureview.jarfile}">
+            <manifest>
+                <attribute name="Class-Path" value="jogl.jar gluegen-rt.jar"/>
+                <attribute name="Main-Class" value="worldwinddiagnostics.GLTextureView"/>
+            </manifest>
+            <fileset dir="${worldwind.classes.dir}">
+                <include name="worldwinddiagnostics/GLTextureView*.class"/>
+                <type type="file"/>
+            </fileset>
+        </jar>
+        <antcall target="jarsigner">
+            <param name="jarfile" value="${basedir}/${gltextureview.jarfile}"/>
+        </antcall>
+    </target>
+</project>

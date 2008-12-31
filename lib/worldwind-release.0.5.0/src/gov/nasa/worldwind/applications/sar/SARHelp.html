@@ -1,0 +1,167 @@
+<html>
+<head>
+<title>
+    Search and Rescue Help
+</title>
+</head>
+
+<body>
+<h2>World Wind Search and Rescue Prototype Instructions</h2>
+
+<h3>Panels and Controls</h3>
+<p>
+There are four panels in the application:
+</p>
+<ul>
+    <li>The main graphics window. See <em>Viewing Controls</em> below for interaction controls.</li>
+    <li>The Tracks panel, listing the currently loaded tracks and the points of the current track. Any field of
+        the displayed track can be edited by double-clicking it and entering a new value. Positions can be added,
+        inserted or deleted via the context menu (right-click menu). New tracks can be added via the Track menu in the
+        menu bar. An offset can be added to all positions via the Offset slider. An offset value can be set explicitly
+        by entering it in the Offset field. The value need not be within the range of the slider.
+    </li>
+    <li>The View and Position panel, for view and simulation control. This panel displays the current track
+        position and provides ways to move the position either directly or under timed control. The leftmost number box
+        and the slider adjacent to it indicate and control the current track position within a track segment. The box
+        identifies the first point of the segment. The slider indicates the relative distance between the two segment
+        points.
+    </li>
+    <li>The Terrain Profile window, for controlling the terrain cross-section display. See <em>Terrain Profile
+        Modes</em> below.
+    </li>
+</ul>
+
+<h3>View Modes</h3>
+
+<p>
+    The three view modes allow you to explore tracks in different ways:
+</p>
+<ul>
+    <li>
+        <p>
+            <b>FREE</b> mode provides unconstrained viewing control. You use it to explore tracks and terrain from any
+            angle and position.
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>FLY-IT</b> mode simulates the pilot's view. Selecting this mode positions the view
+            slightly above and behind the current track position indicated in the Position panel.
+            The view's heading is to that from the first to last positions of the segment.
+            Moving the current position, either manually via the position slider or
+            timed via the player controls, moves the view along the segment either forward or backwards.
+        </p>
+
+        <p>
+            The speed of timed movement can be controlled via the Speed slider. The speed indicated is not currently
+            accurate nor even nearly so. This will be fixed. There's a problem currently that when Fly-It mode is
+            selected the view's heading is not always set correctly. This will be fixed. Using the slider, number box or player
+            controls will set the heading correctly.
+        </p>
+
+        <p>
+            To use Fly-It mode effectively, World Wind's normal behavior of preventing view penetration of the surface
+            must be disabled. The control for this is labeled <em>Subsurface</em>. When this item is set the
+            view will penetrate the surface if necessary as it follows the track. The SubSurface flag is
+            automatically turned on when the view mode is set to Fly-It. 
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>EXAMINE</b> mode is similar to Fly-It mode but the view follows the track from the side, at any angle and
+            distance the user desires. This is the view a chaser aircraft would have. This mode attempts to keep the
+            view focussed on the current position while the user manipulates the view to useful perspectives.
+        </p>
+    </li>
+</ul>
+
+<h3>Terrain Profile Modes</h3>
+
+<p>
+    A 'pulldown' menu in the terrain profile panel determine the terrain cross section position. The yellow line
+    in the graphics window shows the cross section's current position. At all times the terrain profile
+    displays the elevations of the terrain intersected by this line. The "Follow" selection can have the following
+    values:
+</p>
+<ul>
+    <li>
+        <p>
+            <b>Profile at Screen Center</b> places the terrain cross section constantly at the center of the view. You manipulate the
+            globe to change the terrain measured.
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>Profile Under Cursor</b> places the center of the cross section at the cursor (mouse) position. Moving the
+            cursor moves the cross section over the globe's surface.
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>Profile Under Eye</b> is meant to be used in "Fly-It" view mode described in the <em>View Modes</em> section
+            above. It positions the cross section on the surface directly below the pilot, perpendicular to the
+            current heading and centered on the current track position. The profile graph displays the cross section
+            directly to the pilot's left and right. This terrain profile mode is not intended to be used with view modes
+            other than Fly-It.
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>Profile Under Aircraft</b> positions the cross section perpendicular to and centered on the current track at the
+            current track position. This mode enables you to watch the cross section move along the track while in
+            Examine or Free view modes. In Examine mode the view will follow the current track position, therefore the
+            cross section will remain centered in the graphics window while the view moves along the current track. In
+            Free mode the view will be stationary but the cross section will move along the track, requiring the user
+            to continually adjust the view to keep the cross section in sight.
+        </p>
+    </li>
+    <li>
+        <p>
+            <b>No Profile</b> Turn off the cross section and terrain profile.
+        </p>
+    </li>
+</ul>
+
+<h3>Terrain Profile Attributes</h3>
+
+<p>
+    The terrain profile contains toggle switches to control whether the width and height of the profile graph are to the
+    same scale, whether the graph shows elevations relative to mean sea level or the current minimum elevation along the
+    cross section, and whether the eye point of the view should be indicated in the profile. The eye point can be
+    shown only when the terrain profile mode is Under Object or Under Eye.
+</p>
+
+<p>
+    The terrain profile graph size can be set to Small, Medium or Large. Anytime, one graph or the other can be
+    either 'minimized' - and becomes an icon, or 'maximized' - it will then fill the whole screen, by clicking
+    on the + and - buttons in the upper right corner of each graph display.
+</p>
+
+<h3>Viewing Controls</h3>
+<h3>Mouse</h3>
+<ul>
+    <li>
+        <b>Rotate Globe:</b> Move mouse while pressing left mouse button
+    </li>
+    <li>
+        <b>Tilt Globe:</b> Move mouse while pressing right mouse button
+    </li>
+    <li>
+        <b>Zoom:</b> Rotate the mouse wheel
+    </li>
+</ul>
+
+<h3>Keyboard</h3>
+<ul>
+    <li>
+        <b>Rotate Globe:</b> Arrow keys
+    </li>
+    <li>
+        <b>Tilt Globe:</b> Shift + Up or Down arrow
+    </li>
+    <li>
+        <b>Zoom:</b> Control + Up or Down arrow
+    </li>
+</ul>
+</body>
+</html>    
