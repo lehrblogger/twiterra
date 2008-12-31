@@ -3,7 +3,7 @@ package localhost
 import gov.nasa.worldwind.render.GlobeAnnotation
 import gov.nasa.worldwind.geom.Position
 import java.awt.{Color, Font}
-
+/*
 class TweetAnnotation (tweetText: String, var position: Position, val color: Color, val followThis: Boolean) 
     extends GlobeAnnotation({
       if ((new Font("Arial Unicode MS", Font.PLAIN, 12)).canDisplayUpTo(tweetText) == -1) {
@@ -12,21 +12,29 @@ class TweetAnnotation (tweetText: String, var position: Position, val color: Col
       } else {
         "font error"
       }}, position, new Font("Arial Unicode MS", Font.PLAIN, 12))
+{*/
+class TweetAnnotation (tweetText: String, var position: Position, val color: Color, val followThis: Boolean, val isNewTweet: Boolean) 
+    extends GlobeAnnotation(tweetText, position, new Font("Arial Unicode MS", Font.PLAIN, 12))
 {
-        
   customConfiguratins
   if (followThis) {
     //setAlwaysOnTop(true)
   } else {
-    updateAnnotationOpacity(getAttributes.getTextColor.getAlpha / 2)
+    updateAnnotationOpacity(getAttributes.getTextColor.getAlpha / 3)
   }
     
   def customConfiguratins = {
     var annoAttr = getAttributes
     //annoAttr.getFont.setSize(annoAttr.getFont.getSize * 1.25)
-    annoAttr.setBorderColor(color)
-    annoAttr.setTextColor(color)
-    annoAttr.setBackgroundColor(new Color(Color.BLACK.getRed, Color.BLACK.getGreen, Color.BLACK.getBlue, 200))
+    if (isNewTweet) {
+      annoAttr.setBorderColor(Color.BLACK)
+      annoAttr.setTextColor(Color.BLACK)
+      annoAttr.setBackgroundColor(new Color(color.getRed, color.getGreen, color.getBlue, 200))
+    } else {
+      annoAttr.setBorderColor(color)
+      annoAttr.setTextColor(color)
+      annoAttr.setBackgroundColor(new Color(Color.BLACK.getRed, Color.BLACK.getGreen, Color.BLACK.getBlue, 200))
+    }
     setAttributes(annoAttr)
   }
   

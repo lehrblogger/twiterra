@@ -1,5 +1,0 @@
-package localhost
-
-object sdfsdfasdfasd {
-
-}

@@ -4,7 +4,6 @@ import scala.actors.Actor
 import net.liftweb.util.{Log, Can, Full, Empty}
 import net.liftweb.mapper._
 import java.sql.{Connection, DriverManager, SQLException}
-
 import net.liftweb.mapper.Schemifier
 
 
@@ -20,41 +19,81 @@ class TweetHandler (
   
   var numRootTweets = Tweet.findAll(NullRef(Tweet.parentId), By_>(Tweet.numRetweets, 2)).length   
   var lastParentId = Tweet.findAll(NullRef(Tweet.parentId)).sort(_.tweetId.is < _.tweetId.is).last.tweetId.is 
-  var index = 25
- 
-  def sendTweet: Unit = {
-   // if (index == 31) index += 1		//weird bug, it was crashing on this tweet
+  var index: Int = -1
+  var queueSize = 25
+  var curNumThreads = 0
+  var gettingNewTweets: Boolean = false
+  
+  def addTweetsToQueue = {
+    println("globeActor.mailboxSize = " + globeActor.mailboxSize + "  curNumThreads = " + curNumThreads)
     
-    var newTweets = Tweet.findAll(NullRef(Tweet.parentId), By_>(Tweet.tweetId, lastParentId)).sort(_.tweetId.is < _.tweetId.is)
-   // println("lastParentId = " + lastParentId + " and newTweets.length = " + newTweets.length )
-    if (newTweets.length > 0) {
-      lastParentId = newTweets.first.tweetId
-      println("sendTweet (new) " + lastParentId)
-      var newTweet = newTweets.first
-      newTweet.setDepth(newTweet.recursivelyPopulateChildList)
-      globeActor ! Pair("incoming new tweet", newTweet)
-    } else if (index < numRootTweets) {
-      println("sendTweet (old) " + index)
-      var oldTweet = Tweet.findAll(StartAt(index), MaxRows(1), NullRef(Tweet.parentId), By_>(Tweet.numRetweets, 2)).first
-      oldTweet.setDepth(oldTweet.recursivelyPopulateChildList)
-      globeActor ! ("incoming old tweet", oldTweet)
-      index += 1
-    } else {
-      index = 0
-      sendTweet
+    for (i <- (globeActor.mailboxSize + curNumThreads) to queueSize) {
+      val newDbActor = new dbActor(this)
+      newDbActor.start()
     }
   }
 }
 
+  class dbActor(val h: TweetHandler) extends Actor {
+    def act() { 
+      h.index += 1 //TODO do index stuff in loop!
+	  val i: Int = h.index
+      h.curNumThreads += 1
+   
+      var newTweets: List[Tweet] = Nil
+      if (!h.gettingNewTweets) {
+        h.gettingNewTweets = true
+        newTweets = Tweet.findAll(NullRef(Tweet.parentId), By_>(Tweet.tweetId, h.lastParentId)).sort(_.tweetId.is < _.tweetId.is)
+        h.gettingNewTweets = false
+      }
+      
+      if (newTweets.length > 0) {
+	    h.index -= 1
+	    h.lastParentId = newTweets.first.tweetId  
+        var newTweet = newTweets.first
+	    newTweet.setDepth(newTweet.recursivelyPopulateChildList)
+	    println("  sendTweet (new) " + h.lastParentId + "  from " + newTweet.author)
+	    h.globeActor ! Pair("incoming new tweet", newTweet)
+	    
+      } else if (i < h.numRootTweets) {
+	    var oldTweet = Tweet.findAll(StartAt(i), MaxRows(1), NullRef(Tweet.parentId), By_>(Tweet.numRetweets, 2)).first
+	    oldTweet.setDepth(oldTweet.recursivelyPopulateChildList)
+	    if (treeIsAcceptable(oldTweet)) {
+	      println("  sendTweet (old) " + i + "  from " + oldTweet.author)
+          h.globeActor ! Pair("incoming old tweet", oldTweet)
+	    } else {
+	      println("  trashed (old) " + i + "  from " + oldTweet.author)
+	    }
+     
+	  } else {
+	    h.index = 0
+	  }
+      
+      h.curNumThreads -= 1
+      h.addTweetsToQueue
+    } 
+    
+    def treeIsAcceptable(t: Tweet): Boolean = {
+      var minDepth = 2
+      var minAvgDist = 2000
+      var minDist = 300
+      println("    " + t.author + "  t.depth=" + t.depth.toInt + " minAvgDist=" + t.avgDist.toInt + " minDist=" + t.minDist.toInt)
+
+      ((t.numRetweets > minDepth) && (t.depth >= minDepth) && (t.avgDist >= minAvgDist) && (t.minDist >= minDist))
+    }
+  }
+  
+  
 object DBVendor extends ConnectionManager {
- def newConnection(name: ConnectionIdentifier): Can[Connection] = {
-   try {
-     Class.forName("com.mysql.jdbc.Driver")
-     val dm = DriverManager.getConnection("jdbc:mysql://mysql.lehrblogger.com/retweettree?user=twiterra_app&password=jelf7ya9head8w")
-     Full(dm)
-   } catch {
-     case e : Exception => e.printStackTrace; Empty
-   }
- }
- def releaseConnection(conn: Connection) {conn.close}
+  def newConnection(name: ConnectionIdentifier): Can[Connection] = {
+    try {
+      Class.forName("com.mysql.jdbc.Driver")
+      val dm = DriverManager.getConnection("jdbc:mysql://mysql.lehrblogger.com/retweettree?user=twiterra_app&password=jelf7ya9head8w")
+      Full(dm)
+    } catch {
+      case e : Exception => e.printStackTrace; Empty
+    }
+  }
+  
+  def releaseConnection(conn: Connection) {conn.close}
 }

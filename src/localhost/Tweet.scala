@@ -4,6 +4,7 @@ import net.liftweb.mapper._
 import net.liftweb.mapper.MappedDouble 
 import net.liftweb.util.{Can, Full, Empty}
 import java.sql.Timestamp
+import java.util.Locale
 
 object Tweet extends Tweet with KeyedMetaMapper[Long, Tweet] { override def dbTableName = "tweets" }
 
@@ -26,12 +27,7 @@ class Tweet extends KeyedMapper[Long, Tweet] {
   def getChildren = Tweet.findAll(By(Tweet.parentId, tweetId))
   def descendants: List[Tweet] = children ++ children.flatMap(_.descendants)
   var depth = -1
-  /*
-  def recursivelyPopulateChildList: Unit = {	 //returns depth of tree from this tweet
-    children = getChildren
-    children.foreach(child => child.recursivelyPopulateChildList)
-  }
- */
+
   def recursivelyPopulateChildList: Int = {	 //returns depth of tree from this tweet
     children = getChildren
     
@@ -45,34 +41,28 @@ class Tweet extends KeyedMapper[Long, Tweet] {
     }
   }
  
-  def indexOfChildWithMaxAvgDist:Int = {
+  def indexOfMostInterestingChild:Int = {
     if (children.length <= 0) return -1	//bad style. this simplifies code later
+
+    val list1 = for ((t, index) <- children.zipWithIndex) yield (index, t.depth, t.avgDist)
+    val list2 = list1.sort(_._2 > _._2)
+    val list3 = list2.filter(each => each._2 >= list2.first._2) 
     
-    var descendantCounts: List[Int] = Nil
-    children.foreach(t => {
-      descendantCounts = List(t.descendants.length) ++ descendantCounts
-    })
-    val maxCount = descendantCounts.sort(_>_).first
+    list3.sort(_._3 > _._3).first._1
+  }
+  
+  /*
+  
+  def indicesOfChildrenOrderedByAvgDist = {
+	var orderedIndicies: List[Pair[Int, Double]] = Nil
     
-    var index: Int = 0
-    var maxIndices: List[Int] = Nil
+    var index = 0
     children.foreach(t => {
-      if (t.descendants.length == maxCount) {
-        maxIndices = List(index) ++ maxIndices
-      }
+      orderedIndicies = orderedIndicies ++ List(Pair(index,t.avgDist))
       index += 1
     })
     
-    if (maxIndices.length == 1) {
-      return maxIndices.first
-    } else {
-      var bestList = maxIndices intersect indicesOfChildrenWithMaxAvgDist;
-      if (bestList.length > 0) {
-        return bestList.first
-      } else {
-        return maxIndices.first
-      }
-    }
+    orderedIndicies.sort(_._2 > _._2)
   }
   def indicesOfChildrenWithMaxAvgDist = {
     var max: Double = 0
@@ -87,7 +77,7 @@ class Tweet extends KeyedMapper[Long, Tweet] {
     })
     List(maxIndex)
   }
-  
+  */
   def minDist = {
     var min = Math.MAX_DOUBLE
     descendants.foreach(t => {
@@ -100,30 +90,12 @@ class Tweet extends KeyedMapper[Long, Tweet] {
   def avgDist = {
     descendants.foldLeft(0.0)(_ + _.parentDist.is) / (descendants.length max 1)	
   }
- /* 
-  def avgDist = {
-    var sum: Double = 0
-    descendants.foreach(t => {
-      sum += t.parentDist.is
-    })
-    sum / descendants.length
-  }
-  
-  def isRoot: Boolean = parentId.obj match { 
-	case Full(x) => true
-	case _ => false
-  } 
- 
-  def isLeaf: Boolean = { 
-	(numRetweets == 0)
-  }
-  */
   
   def setDepth(d: Int) = {
     depth = d
   }
   
   override def toString = {
-    author + ": " + original //new String(original.getBytes(), "UTF-16")
+    author + ": " + new String(original.getBytes(), "MacRoman")
   }
 }
