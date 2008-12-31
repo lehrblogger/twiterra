@@ -26,31 +26,37 @@ import java.awt.*;
  *
  * @version $Id: ApplicationTemplate.java 5176 2008-04-25 21:31:06Z patrickmurris $
  */
-public class ApplicationTemplate
+public class TwiTerraApp
 {
     
     protected static class AppFrame extends JFrame
     {
-        private Dimension canvasSize = new Dimension(1360, 768);
-
+    	private Dimension canvasSize;
         private TwiTerraAppPanel wwjPanel;
         private LayerPanel layerPanel;
         private StatisticsPanel statsPanel;
 
         public AppFrame()
-        {
-            this.initialize(false, false, false);
+        {	
+        	this.setUndecorated(true);
+        	this.setExtendedState(Frame.MAXIMIZED_BOTH);
+        	Toolkit tk = Toolkit.getDefaultToolkit();
+    		int xSize = ((int) tk.getScreenSize().getWidth());
+    		int ySize = ((int) tk.getScreenSize().getHeight());
+    		
+            this.initialize(xSize, ySize + 20, false, false, false);
         }
 
-        public AppFrame(boolean includeStatusBar, boolean includeLayerPanel, boolean includeStatsPanel)
+        public AppFrame(int width, int height, boolean includeStatusBar, boolean includeLayerPanel, boolean includeStatsPanel)
         {
-            this.initialize(includeStatusBar, includeLayerPanel, includeStatsPanel);
+            this.initialize(width, height, includeStatusBar, includeLayerPanel, includeStatsPanel);
         }
 
-        private void initialize(boolean includeStatusBar, boolean includeLayerPanel, boolean includeStatsPanel)
+        private void initialize(int width, int height, boolean includeStatusBar, boolean includeLayerPanel, boolean includeStatsPanel)
         {
             // Create the WorldWindow.
-            this.wwjPanel = new TwiTerraAppPanel(this.canvasSize, includeStatusBar);
+        	this.canvasSize = new Dimension(width, height);
+            this.wwjPanel = new TwiTerraAppPanel(canvasSize, includeStatusBar);
             this.wwjPanel.setPreferredSize(canvasSize);
 
             // Put the pieces together.
@@ -164,8 +170,7 @@ public class ApplicationTemplate
         layers.add(compassPosition + 1, layer);
     }
 
-    public static void insertBeforeLayerName(WorldWindow wwd, Layer layer, String targetName)
-    {
+    public static void insertBeforeLayerName(WorldWindow wwd, Layer layer, String targetName) {
         // Insert the layer into the layer list just before the target layer.
         int targetPosition = 0;
         LayerList layers = wwd.getModel().getLayers();
@@ -185,8 +190,8 @@ public class ApplicationTemplate
         if (Configuration.isMacOS())
         {
             System.setProperty("apple.laf.useScreenMenuBar", "true");
-            System.setProperty("com.apple.mrj.application.apple.menu.about.name", "World Wind Application");
-            System.setProperty("com.apple.mrj.application.growbox.intrudes", "false");
+            System.setProperty("com.apple.mrj.application.apple.menu.about.name", "TwiTerra");
+            //System.setProperty("com.apple.mrj.application.growbox.intrudes", "false");
             System.setProperty("apple.awt.brushMetalLook", "true");
         }
     }
@@ -201,8 +206,9 @@ public class ApplicationTemplate
         try
         {
             final AppFrame frame = (AppFrame) appFrameClass.newInstance();
-            frame.setTitle(appName);
+            //frame.setTitle(appName);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            
             java.awt.EventQueue.invokeLater(new Runnable()
             {
                 public void run()
@@ -221,6 +227,6 @@ public class ApplicationTemplate
     {
         // Call the static start method like this from the main method of your derived class.
         // Substitute your application's name for the first argument.
-        ApplicationTemplate.start("TwiTerra", AppFrame.class);
+        TwiTerraApp.start("TwiTerra - revealing how people use Twitter to share and re-share ideas, building connections that encircle the world - http://twiterra.com", AppFrame.class);
     }
 }

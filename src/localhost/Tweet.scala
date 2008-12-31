@@ -25,7 +25,7 @@ class Tweet extends KeyedMapper[Long, Tweet] {
 
   def getChildren = Tweet.findAll(By(Tweet.parentId, tweetId))
   def descendants: List[Tweet] = children ++ children.flatMap(_.descendants)
-
+  var depth = -1
   /*
   def recursivelyPopulateChildList: Unit = {	 //returns depth of tree from this tweet
     children = getChildren
@@ -108,7 +108,6 @@ class Tweet extends KeyedMapper[Long, Tweet] {
     })
     sum / descendants.length
   }
-  */
   
   def isRoot: Boolean = parentId.obj match { 
 	case Full(x) => true
@@ -117,6 +116,11 @@ class Tweet extends KeyedMapper[Long, Tweet] {
  
   def isLeaf: Boolean = { 
 	(numRetweets == 0)
+  }
+  */
+  
+  def setDepth(d: Int) = {
+    depth = d
   }
   
   override def toString = {
