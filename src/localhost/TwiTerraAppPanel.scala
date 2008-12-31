@@ -58,12 +58,11 @@ class TwiTerraAppPanel (val canvasSize: Dimension, val includeStatusBar: Boolean
   context.setModel(m)
   context.setSurfaceGeometry(new SectorGeometryList) 									// spent a long time pouring through docs to find stuff for the DrawingContext that worked
   context.setGLContext(wwd.getContext)
-   
-      //var tweetLayer: Layer = new RenderableLayer;
+    
       var layers: scala.List[Layer] = wwd.getModel.getLayers.toList
       layers = layers.filter { l =>
 	      (l.isInstanceOf[gov.nasa.worldwind.layers.StarsLayer] ||
-           //l.isInstanceOf[gov.nasa.worldwind.layers.SkyGradientLayer] ||
+           l.isInstanceOf[gov.nasa.worldwind.layers.SkyGradientLayer] ||
            l.isInstanceOf[gov.nasa.worldwind.layers.FogLayer] ||
            l.isInstanceOf[gov.nasa.worldwind.layers.Earth.BMNGOneImage] ||
            l.isInstanceOf[gov.nasa.worldwind.layers.Earth.BMNGWMSLayer] ||
@@ -77,11 +76,7 @@ class TwiTerraAppPanel (val canvasSize: Dimension, val includeStatusBar: Boolean
            false //for commenting 
 	      )
 	      //if (l.isInstanceOf[gov.nasa.worldwind.layers.Earth.BMNGOneImage] || l.isInstanceOf[gov.nasa.worldwind.layers.Earth.BMNGWMSLayer] || l.isInstanceOf[gov.nasa.worldwind.layers.Earth.LandsatI3WMSLayer] || l.isInstanceOf[WorldMapLayer]  || l.isInstanceOf[ScalebarLayer]|| l.isInstanceOf[CompassLayer]) 
-	  }    
-      layers.foreach { l =>
-       //     l.setEnabled(false)
-	      //if (l.isInstanceOf[gov.nasa.worldwind.layers.Earth.BMNGOneImage] || l.isInstanceOf[gov.nasa.worldwind.layers.Earth.BMNGWMSLayer] || l.isInstanceOf[gov.nasa.worldwind.layers.Earth.LandsatI3WMSLayer] || l.isInstanceOf[WorldMapLayer]  || l.isInstanceOf[ScalebarLayer]|| l.isInstanceOf[CompassLayer]) 
-	  }    
+	  }
       initLayerCount = layers.length
       wwd.getModel.setLayers(new LayerList(layers.toArray))
         
@@ -89,7 +84,8 @@ class TwiTerraAppPanel (val canvasSize: Dimension, val includeStatusBar: Boolean
         loop {
           react {
             case "animation complete" => react {
-              case newTweet: Tweet => displayTweetTree(newTweet)
+              case ("incoming new tweet", newTweet: Tweet) => displayTweetTree(newTweet, true)
+              case ("incoming old tweet", newTweet: Tweet) => displayTweetTree(newTweet, false)
             }
           }
         }
@@ -102,111 +98,134 @@ class TwiTerraAppPanel (val canvasSize: Dimension, val includeStatusBar: Boolean
         } 
       } 
     }
-   
    globeActor ! "animation complete"
    twitterActor ! "request next tweet"
-     
-    var animationCount = 0
-    
-    val maxNumTrees = 20
-    val duration = 3000
+      
+    val maxNumTrees = 6
+    val animDuration = 2500
+    val readDuration = 4000
     var minDepth = 2
-    var minAvgDist = 1000
+    var minAvgDist = 2000
     var minDist = 300
     
-    def displayTweetTree(newTweet: Tweet): Unit = {
+    val transitionActor = actor {
+      loop {
+        react {
+          case t: TweetPackage => {
+            Thread.sleep(readDuration)
+            displayTweet(t)
+          }
+          case "animation complete" => globeActor ! "animation complete" //wait until all the animations here are done, then it will wake up and go
+        }
+      }
+    }
+   
+    
+    
+    def displayTweetTree(newTweet: Tweet, isNewTweet: Boolean): Unit = {
+      twitterActor ! "request next tweet"
       twitterActor ! "request next tweet"
       
-      println(newTweet.author + "::  minDepth=" + newTweet.depth + " minAvgDist=" + newTweet.avgDist)
-      if ((newTweet.numRetweets > minDepth) && (newTweet.depth >= minDepth) && (newTweet.avgDist >= minAvgDist) && (newTweet.minDist >= minDist)) {
+      println(newTweet.author + "::  minDepth=" + newTweet.depth.toInt + " minAvgDist=" + newTweet.avgDist.toInt + " minDist=" + newTweet.minDist.toInt)
+      if (isNewTweet || ((newTweet.numRetweets > minDepth) && (newTweet.depth >= minDepth) && (newTweet.avgDist >= minAvgDist) && (newTweet.minDist >= minDist))) {
         val initEyePos: Position = new Position(wwd.getView.getCurrentEyePosition.getLatitude, wwd.getView.getCurrentEyePosition.getLongitude, 0)
         val newTweetPos: Position = Position.fromDegrees(newTweet.locLat, newTweet.locLon, 0)
-        Thread.sleep(duration)
-        wwd.getView.applyStateIterator(ScheduledOrbitViewStateIterator.createCenterIterator(initEyePos, newTweetPos, duration, true))
-        Thread.sleep(duration)
+        wwd.getView.applyStateIterator(ScheduledOrbitViewStateIterator.createCenterIterator(initEyePos, newTweetPos, animDuration, true))
+        Thread.sleep(animDuration)
         
-        var randColor = new Random()	
-        val color = new Color((randColor.nextFloat * 100).toInt + 155, (randColor.nextFloat * 100).toInt + 155, (randColor.nextFloat * 100).toInt + 155)
-        var layer: RenderableLayer = new RenderableLayer()
-        wwd.getModel.getLayers.add(/*wwd.getModel.getLayers.size,*/ layer)
-
-
-        var tweetAnno = new TweetAnnotation(newTweet.author + ": " + newTweet.original, Position.fromDegrees(newTweet.locLat, newTweet.locLon, 0), color)
-        layer.addRenderable(tweetAnno)
-       
+        
+        var color = Color.LIGHT_GRAY
+        if (isNewTweet) {
+          var randColor = new Random()	
+          color = new Color((randColor.nextFloat * 80).toInt + 175, (randColor.nextFloat * 80).toInt + 175, (randColor.nextFloat * 80).toInt + 175)
+        }
+          
+        var rLayer: RenderableLayer = new RenderableLayer()
+        wwd.getModel.getLayers.add(wwd.getModel.getLayers.size, rLayer)
+      
         updateTreeLayers
-        displayTweet(newTweet, true, tweetAnno, layer, color)
+        var tweetAnno = new TweetAnnotation(newTweet.toString, Position.fromDegrees(newTweet.locLat, newTweet.locLon, 0), color, true)
+        var aLayer: AnnotationLayer = new AnnotationLayer()
+        aLayer.addAnnotation(tweetAnno)
+        wwd.getModel.getLayers.add(wwd.getModel.getLayers.size, aLayer)
+        Thread.sleep(readDuration)
+        
+        transitionActor ! new TweetPackage(newTweet, true, rLayer, aLayer, color)
       } else {
         globeActor ! "animation complete"
       }
     }
     
-    def displayTweet(newTweet: Tweet, followThis: Boolean, tweetAnno: TweetAnnotation, layer: RenderableLayer, color: Color): Unit = {
-      val newPos: Position = Position.fromDegrees(newTweet.locLat, newTweet.locLon, 0)
-    
-      var maxIndex = newTweet.indexOfChildWithMaxAvgDist;
+    def displayTweet(t: TweetPackage): Unit = {
+      val newPos: Position = Position.fromDegrees(t.tweet.locLat, t.tweet.locLon, 0)
+      var maxIndex = t.tweet.indexOfChildWithMaxAvgDist;
       var index = 0
-      newTweet.children.foreach(childTweet => {
+      
+      t.tweet.children.foreach(childTweet => {
         val childPos: Position = Position.fromDegrees(childTweet.locLat, childTweet.locLon, 0)
       
-        var line: AnimatedAnnotatedLine = new AnimatedAnnotatedLine(newPos, childPos, None, color)
-        if (maxIndex == index) {
-          line = new AnimatedAnnotatedLine(newPos, childPos, Some(tweetAnno), color)
-        }
-        layer.addRenderable(line)
+        val tweetAnno = new TweetAnnotation(childTweet.toString, newPos, t.color, (t.followThis && (maxIndex == index)))
+        t.aLayer.addAnnotation(tweetAnno)
+        var line = new AnimatedAnnotatedLine(newPos, childPos, tweetAnno, t.color)
+        t.rLayer.addRenderable(line)
         
-        val target = new LineEventHandler(line, childTweet, (followThis && (maxIndex == index)), tweetAnno, layer, color)
-        val anim: Animator = new Animator(duration, target)
-        animationCount += 1
+        val target = new LineEventHandler(line, new TweetPackage(childTweet, (t.followThis && (maxIndex == index)), t.rLayer, t.aLayer, t.color))
+        val anim: Animator = new Animator(animDuration, target)
         anim.start()
         
      	if (maxIndex == index) {
-     	  wwd.getView.applyStateIterator(ScheduledOrbitViewStateIterator.createCenterIterator(newPos, childPos, duration, true))
+     	  wwd.getView.applyStateIterator(ScheduledOrbitViewStateIterator.createCenterIterator(newPos, childPos, animDuration, true))
         }
       
         index += 1
       })
+      
+      if (t.followThis && (t.tweet.children.length == 0)) {
+        transitionActor ! "animation complete"
+      }
     }
     
     def updateTreeLayers = {
       var initLayers: scala.List[Layer] = wwd.getModel.getLayers.toList
       var finalLayers: scala.List[Layer] = initLayers.dropRight(initLayers.length - initLayerCount)
-      var renderLayers: scala.List[Layer] = Nil
       
       var alpha = (255 / maxNumTrees)
       initLayers = initLayers.drop(initLayerCount)
-      initLayers = initLayers.drop(initLayers.length - maxNumTrees.toInt)
-      initLayers.reverse.foreach( l => {
+      initLayers = initLayers.drop(initLayers.length - (maxNumTrees.toInt * 2))
+      initLayers.foreach( l => {
         if (l.isInstanceOf[RenderableLayer]) {
-          setLayerOpacity(l.asInstanceOf[RenderableLayer], alpha)
+          setRLayerOpacity(l.asInstanceOf[RenderableLayer], alpha)
+	    } else if (l.isInstanceOf[AnnotationLayer]) {
+          setALayerOpacity(l.asInstanceOf[AnnotationLayer], alpha)
 	    }
-        renderLayers = renderLayers ++ scala.List(l)
-        //alpha -= (255 / maxNumTrees)
+        finalLayers = finalLayers ++ scala.List(l)
       })
       
-      finalLayers = finalLayers ++ renderLayers.reverse
       wwd.getModel.setLayers(new LayerList(finalLayers.toArray))
     }
     
-  def setLayerOpacity(l: RenderableLayer, alpha: Int) {
-    println("here")
-	  var renderables: JIterable[Renderable] = l.asInstanceOf[RenderableLayer].getRenderables
-	  var renderablesIterator: JIterator[Renderable] = renderables.iterator
-	  
-//	  def calcAlpha(a: Int): Int = 255 min (0 max (alpha - (255 - a)))
-	  
-  
+  def setRLayerOpacity(l: RenderableLayer, alpha: Int) {
+	  var renderablesIterator: JIterator[Renderable] = l.getRenderables.iterator
+   
 	  while (renderablesIterator.hasNext) {
 	    var r = renderablesIterator.next
 	    if (r.isInstanceOf[AnimatedAnnotatedLine]) {
 	      r.asInstanceOf[AnimatedAnnotatedLine].updateLineOpacity(alpha)
-	    } else if (r.isInstanceOf[TweetAnnotation]) {
-	      r.asInstanceOf[TweetAnnotation].updateAnnotationOpacity(alpha)
+	    }
+	 }
+  }
+  def setALayerOpacity(l: AnnotationLayer, alpha: Int) {
+	  var renderablesIterator: JIterator[Annotation] = l.getAnnotations.iterator
+   
+	  while (renderablesIterator.hasNext) {
+	    var a = renderablesIterator.next
+        if (a.isInstanceOf[TweetAnnotation]) {
+	      a.asInstanceOf[TweetAnnotation].updateAnnotationOpacity(alpha)
 	    }
 	 }
   }
     
-  
+
   def getWwd: WorldWindowGLCanvas = {
      return wwd;
   }
@@ -215,7 +234,7 @@ class TwiTerraAppPanel (val canvasSize: Dimension, val includeStatusBar: Boolean
     return statusBar;
   }
     
-    class LineEventHandler(line: AnimatedAnnotatedLine, childTweet: Tweet, followThis: Boolean, globeAnno: TweetAnnotation, layer: RenderableLayer, color: Color) extends TimingTargetAdapter
+    class LineEventHandler(line: AnimatedAnnotatedLine, t: TweetPackage) extends TimingTargetAdapter
     {
       override def begin = {
       }
@@ -225,77 +244,17 @@ class TwiTerraAppPanel (val canvasSize: Dimension, val includeStatusBar: Boolean
       }
   
       override def end = {
-        displayTweet(childTweet, followThis, globeAnno, layer, color)
-        animationCount -= 1
-        if (animationCount == 0) globeActor ! "animation complete"
+        if (t.followThis) {
+          transitionActor ! t
+        } else {
+          displayTweet(t)
+        }
       } 
     }	    
 }
 
-class TweetAnnotation (val text: String, var position: Position, val color: Color) extends GlobeAnnotation
-{
-  var annoAttr = new AnnotationAttributes
-  //annoAttr.getFont.setSize(annoAttr.getFont.getSize * 1.25)
-  annoAttr.setBorderColor(color)
-  annoAttr.setTextColor(color)
-  annoAttr.setBackgroundColor(new Color(Color.BLACK.getRed, Color.BLACK.getGreen, Color.BLACK.getBlue, 190))
-  setAttributes(annoAttr)
-  
-  
-  def updateAnnotationOpacity(alpha: Int) = {
-    def calcAlpha(a: Int): Int = 0 max (a - alpha)
-  
-    val attributes = getAttributes
-      
-    val bc = attributes.getBorderColor
-    attributes.setBorderColor(new Color(bc.getRed, bc.getGreen, bc.getBlue, calcAlpha(bc.getAlpha)))
-   
-    val bgc = attributes.getBackgroundColor
-    attributes.setBackgroundColor(new Color(bgc.getRed, bgc.getGreen, bgc.getBlue, calcAlpha(bgc.getAlpha)))
-        
-    val tc = attributes.getTextColor
-    attributes.setTextColor(new Color(tc.getRed, tc.getGreen, tc.getBlue, calcAlpha(tc.getAlpha)))
+case class TweetPackage(val tweet: Tweet, val followThis: Boolean, val rLayer: RenderableLayer, val aLayer: AnnotationLayer, val color: Color)
 
-    setAttributes(attributes)
-  }  
-}
 
-class AnimatedAnnotatedLine (val startPos: Position, val endPos: Position, val tweetAnno: Option[TweetAnnotation], val color: Color) extends Polyline
-{
-  customConfigurations
-  
-  def updateLine(progress: Float) = {
-    val curPos = Position.interpolate(progress, startPos, endPos)
-    val posArray = new ArrayList[Position]
-    posArray.add(startPos)
-    posArray.add(curPos)
-    setPositions(posArray)
- 
-    tweetAnno match { 
-      case Some(s) => s.setPosition(curPos)
-      case None => // handle None case
-
- 	}
-  }
-  
-  def customConfigurations= {
-    setLineWidth(3)
-    setHighlightColor(new Color(0f, 0f, 0f, 0.5f))
-    setHighlighted(true)
-    setFollowTerrain(true)
-    setPathType(Polyline.LINEAR)
-    setColor(color)
-    setAntiAliasHint(Polyline.ANTIALIAS_FASTEST)
-  }
-  
-  def updateLineOpacity(alpha: Int) = {
-    def calcAlpha(a: Int): Int = 0 max (a - alpha)
-  
-	val lc = getColor
-	setColor(new Color(lc.getRed, lc.getGreen, lc.getBlue, calcAlpha(lc.getAlpha)))
-	val hc = getHighlightColor
-	setHighlightColor(new Color(hc.getRed, hc.getGreen, hc.getBlue, calcAlpha(hc.getAlpha)))   
-  }
-}
 
 

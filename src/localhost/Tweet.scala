@@ -124,6 +124,6 @@ class Tweet extends KeyedMapper[Long, Tweet] {
   }
   
   override def toString = {
-    author + ": " + original
+    author + ": " + original //new String(original.getBytes(), "UTF-16")
   }
 }
