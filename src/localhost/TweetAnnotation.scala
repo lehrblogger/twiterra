@@ -25,7 +25,7 @@ class TweetAnnotation (tweetText: String, var position: Position, val color: Col
     
   def customConfiguratins = {
     var annoAttr = getAttributes
-    //annoAttr.getFont.setSize(annoAttr.getFont.getSize * 1.25)
+
     if (isNewTweet) {
       annoAttr.setBorderColor(Color.BLACK)
       annoAttr.setTextColor(Color.BLACK)

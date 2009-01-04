@@ -7,15 +7,16 @@ All Rights Reserved.
 package localhost;
 
 import gov.nasa.worldwind.*;
-import gov.nasa.worldwind.util.StatusBar;
+/*import gov.nasa.worldwind.util.StatusBar;
 import gov.nasa.worldwind.event.*;
 import gov.nasa.worldwind.examples.ClickAndGoSelectListener;
 import gov.nasa.worldwind.examples.LayerPanel;
 import gov.nasa.worldwind.examples.StatisticsPanel;
 import gov.nasa.worldwind.avlist.AVKey;
-import gov.nasa.worldwind.awt.WorldWindowGLCanvas;
 import gov.nasa.worldwind.layers.*;
 import gov.nasa.worldwind.layers.placename.PlaceNameLayer;
+*/
+import gov.nasa.worldwind.awt.WorldWindowGLCanvas;
 
 import javax.swing.*;
 import java.awt.*;
@@ -31,10 +32,13 @@ public class TwiTerraApp
     
     protected static class AppFrame extends JFrame
     {
-    	private Dimension canvasSize;
+    	/**
+		 * I just wanted the warning to go away - Steven
+		 */
+		private static final long serialVersionUID = 1L;
+		
+		private Dimension canvasSize;
         private TwiTerraAppPanel wwjPanel;
-        private LayerPanel layerPanel;
-        private StatisticsPanel statsPanel;
 
         public AppFrame()
         {	
@@ -44,49 +48,23 @@ public class TwiTerraApp
     		int xSize = ((int) tk.getScreenSize().getWidth());
     		int ySize = ((int) tk.getScreenSize().getHeight());
     		
-            this.initialize(xSize, ySize + 20, false, false, false);
+            this.initialize(xSize, ySize + 20);
         }
 
-        public AppFrame(int width, int height, boolean includeStatusBar, boolean includeLayerPanel, boolean includeStatsPanel)
+        public AppFrame(int width, int height)
         {
-            this.initialize(width, height, includeStatusBar, includeLayerPanel, includeStatsPanel);
+            this.initialize(width, height);
         }
 
-        private void initialize(int width, int height, boolean includeStatusBar, boolean includeLayerPanel, boolean includeStatsPanel)
+        private void initialize(int width, int height)
         {
             // Create the WorldWindow.
         	this.canvasSize = new Dimension(width, height);
-            this.wwjPanel = new TwiTerraAppPanel(canvasSize, includeStatusBar);
+            this.wwjPanel = new TwiTerraAppPanel(canvasSize);
             this.wwjPanel.setPreferredSize(canvasSize);
 
             // Put the pieces together.
             this.getContentPane().add(wwjPanel, BorderLayout.CENTER);
-            if (includeLayerPanel)
-            {
-                this.layerPanel = new LayerPanel(this.wwjPanel.getWwd(), null);
-                this.getContentPane().add(this.layerPanel, BorderLayout.WEST);
-            }
-            if (includeStatsPanel)
-            {
-                this.statsPanel = new StatisticsPanel(this.wwjPanel.getWwd(), new Dimension(250, canvasSize.height));
-                this.getContentPane().add(this.statsPanel, BorderLayout.EAST);
-                this.wwjPanel.getWwd().addRenderingListener(new RenderingListener()
-                {
-                    public void stageChanged(RenderingEvent event)
-                    {
-                        if (event.getSource() instanceof WorldWindow)
-                        {
-                            EventQueue.invokeLater(new Runnable()
-                            {
-                                public void run()
-                                {
-                                    statsPanel.update(wwjPanel.getWwd());
-                                }
-                            });
-                        }
-                    }
-                });
-            }
             this.pack();
 
             // Center the application on the screen.
@@ -114,75 +92,6 @@ public class TwiTerraApp
         {
             return this.wwjPanel.getWwd();
         }
-
-        public StatusBar getStatusBar()
-        {
-            return this.wwjPanel.getStatusBar();
-        }
-
-        public LayerPanel getLayerPanel()
-        {
-            return layerPanel;
-        }
-
-        public StatisticsPanel getStatsPanel()
-        {
-            return statsPanel;
-        }
-    }
-
-    public static void insertBeforeCompass(WorldWindow wwd, Layer layer)
-    {
-        // Insert the layer into the layer list just before the compass.
-        int compassPosition = 0;
-        LayerList layers = wwd.getModel().getLayers();
-        for (Layer l : layers)
-        {
-            if (l instanceof CompassLayer)
-                compassPosition = layers.indexOf(l);
-        }
-        layers.add(compassPosition, layer);
-    }
-
-    public static void insertBeforePlacenames(WorldWindow wwd, Layer layer)
-    {
-        // Insert the layer into the layer list just before the placenames.
-        int compassPosition = 0;
-        LayerList layers = wwd.getModel().getLayers();
-        for (Layer l : layers)
-        {
-            if (l instanceof PlaceNameLayer)
-                compassPosition = layers.indexOf(l);
-        }
-        layers.add(compassPosition, layer);
-    }
-
-    public static void insertAfterPlacenames(WorldWindow wwd, Layer layer)
-    {
-        // Insert the layer into the layer list just after the placenames.
-        int compassPosition = 0;
-        LayerList layers = wwd.getModel().getLayers();
-        for (Layer l : layers)
-        {
-            if (l instanceof PlaceNameLayer)
-                compassPosition = layers.indexOf(l);
-        }
-        layers.add(compassPosition + 1, layer);
-    }
-
-    public static void insertBeforeLayerName(WorldWindow wwd, Layer layer, String targetName) {
-        // Insert the layer into the layer list just before the target layer.
-        int targetPosition = 0;
-        LayerList layers = wwd.getModel().getLayers();
-        for (Layer l : layers)
-        {
-            if (l.getName().indexOf(targetName) != -1)
-            {
-                targetPosition = layers.indexOf(l);
-                break;
-            }
-        }
-        layers.add(targetPosition, layer);
     }
 
     static
@@ -196,7 +105,7 @@ public class TwiTerraApp
         }
     }
 
-    public static void start(String appName, Class appFrameClass)
+    public static void start(String appName, Class<AppFrame> appFrameClass)
     {
         if (Configuration.isMacOS() && appName != null)
         {
@@ -227,6 +136,6 @@ public class TwiTerraApp
     {
         // Call the static start method like this from the main method of your derived class.
         // Substitute your application's name for the first argument.
-        TwiTerraApp.start("TwiTerra - revealing how people use Twitter to share and re-share ideas, building connections that encircle the world - http://twiterra.com", AppFrame.class);
+        TwiTerraApp.start("TwiTerra - http://twiterra.com", AppFrame.class);
     }
 }

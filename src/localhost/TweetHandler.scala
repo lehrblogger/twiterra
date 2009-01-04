@@ -32,6 +32,8 @@ class TweetHandler (
       newDbActor.start()
     }
   }
+  
+  def resetIndex { index = 0 }
 }
 
   class dbActor(val h: TweetHandler) extends Actor {
@@ -66,7 +68,7 @@ class TweetHandler (
 	    }
      
 	  } else {
-	    h.index = 0
+	    h.resetIndex
 	  }
       
       h.curNumThreads -= 1

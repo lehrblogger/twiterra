@@ -31,18 +31,11 @@ import org.jdesktop.animation.timing.{Animator, TimingTargetAdapter}
 import org.jdesktop.animation.timing.interpolation.PropertySetter
 
 
-class TwiTerraAppPanel (val canvasSize: Dimension, val includeStatusBar: Boolean) extends JPanel
+class TwiTerraAppPanel (val canvasSize: Dimension) extends JPanel
 {
   var wwd: WorldWindowGLCanvas = new WorldWindowGLCanvas()												// random stuff I do not full understand for the DrawingContext, for the lines and Annotations
   var initLayerCount = 0;
-    
-  var statusBar: StatusBar = new StatusBar();
-  if (includeStatusBar) {
-  //    var statusBar = new StatusBar();
-    add(statusBar, BorderLayout.PAGE_END);
-    statusBar.setEventSource(wwd);
-  }
-
+  
   wwd.setPreferredSize(canvasSize);
 
   // Create the default model as described in the current worldwind properties.
@@ -75,8 +68,7 @@ class TwiTerraAppPanel (val canvasSize: Dimension, val includeStatusBar: Boolean
            //l.isInstanceOf[gov.nasa.worldwind.layers.CompassLayer] ||
            false //for commenting 
 	      )
-	      //if (l.isInstanceOf[gov.nasa.worldwind.layers.Earth.BMNGOneImage] || l.isInstanceOf[gov.nasa.worldwind.layers.Earth.BMNGWMSLayer] || l.isInstanceOf[gov.nasa.worldwind.layers.Earth.LandsatI3WMSLayer] || l.isInstanceOf[WorldMapLayer]  || l.isInstanceOf[ScalebarLayer]|| l.isInstanceOf[CompassLayer]) 
-	  }
+      }
       initLayerCount = layers.length
       wwd.getModel.setLayers(new LayerList(layers.toArray))
         
@@ -212,10 +204,6 @@ class TwiTerraAppPanel (val canvasSize: Dimension, val includeStatusBar: Boolean
 
   def getWwd: WorldWindowGLCanvas = {
      return wwd;
-  }
-
-  def getStatusBar: StatusBar = {
-    return statusBar;
   }
     
     class LineEventHandler(line: AnimatedAnnotatedLine, t: TweetPackage) extends TimingTargetAdapter

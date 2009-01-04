@@ -51,33 +51,6 @@ class Tweet extends KeyedMapper[Long, Tweet] {
     list3.sort(_._3 > _._3).first._1
   }
   
-  /*
-  
-  def indicesOfChildrenOrderedByAvgDist = {
-	var orderedIndicies: List[Pair[Int, Double]] = Nil
-    
-    var index = 0
-    children.foreach(t => {
-      orderedIndicies = orderedIndicies ++ List(Pair(index,t.avgDist))
-      index += 1
-    })
-    
-    orderedIndicies.sort(_._2 > _._2)
-  }
-  def indicesOfChildrenWithMaxAvgDist = {
-    var max: Double = 0
-    var index = 0
-    var maxIndex = 0
-    children.foreach(t => {
-      if (t.avgDist > max) {
-        max = t.avgDist
-        maxIndex = index
-      }
-      index += 1
-    })
-    List(maxIndex)
-  }
-  */
   def minDist = {
     var min = Math.MAX_DOUBLE
     descendants.foreach(t => {
