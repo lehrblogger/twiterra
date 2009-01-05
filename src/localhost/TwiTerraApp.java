@@ -17,7 +17,6 @@ import gov.nasa.worldwind.layers.*;
 import gov.nasa.worldwind.layers.placename.PlaceNameLayer;
 */
 import gov.nasa.worldwind.awt.WorldWindowGLCanvas;
-
 import javax.swing.*;
 import java.awt.*;
 

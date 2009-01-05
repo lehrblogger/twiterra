@@ -20,14 +20,19 @@ class TweetHandler (
   var numRootTweets = Tweet.findAll(NullRef(Tweet.parentId), By_>(Tweet.numRetweets, 2)).length   
   var lastParentId = Tweet.findAll(NullRef(Tweet.parentId)).sort(_.tweetId.is < _.tweetId.is).last.tweetId.is 
   var index: Int = -1
-  var queueSize = 25
+  var queueSize = 30
   var curNumThreads = 0
   var gettingNewTweets: Boolean = false
   
   def addTweetsToQueue = {
-    println("globeActor.mailboxSize = " + globeActor.mailboxSize + "  curNumThreads = " + curNumThreads)
-    
     for (i <- (globeActor.mailboxSize + curNumThreads) to queueSize) {
+      addOneTweetToQueue
+    }
+  }
+  
+  def addOneTweetToQueue = {      
+    println("globeActor.mailboxSize = " + globeActor.mailboxSize + "  curNumThreads = " + curNumThreads)
+    if ((globeActor.mailboxSize + curNumThreads) < queueSize) {
       val newDbActor = new dbActor(this)
       newDbActor.start()
     }
@@ -38,6 +43,7 @@ class TweetHandler (
 
   class dbActor(val h: TweetHandler) extends Actor {
     def act() { 
+      println("one new thread")
       h.index += 1 //TODO do index stuff in loop!
 	  val i: Int = h.index
       h.curNumThreads += 1
@@ -53,17 +59,18 @@ class TweetHandler (
 	    h.index -= 1
 	    h.lastParentId = newTweets.first.tweetId  
         var newTweet = newTweets.first
-	    newTweet.setDepth(newTweet.recursivelyPopulateChildList)
+	    newTweet.recursivelyPopulateChildList
 	    println("  sendTweet (new) " + h.lastParentId + "  from " + newTweet.author)
 	    h.globeActor ! Pair("incoming new tweet", newTweet)
 	    
       } else if (i < h.numRootTweets) {
 	    var oldTweet = Tweet.findAll(StartAt(i), MaxRows(1), NullRef(Tweet.parentId), By_>(Tweet.numRetweets, 2)).first
-	    oldTweet.setDepth(oldTweet.recursivelyPopulateChildList)
+	    oldTweet.recursivelyPopulateChildList
 	    if (treeIsAcceptable(oldTweet)) {
 	      println("  sendTweet (old) " + i + "  from " + oldTweet.author)
           h.globeActor ! Pair("incoming old tweet", oldTweet)
 	    } else {
+	      h.addOneTweetToQueue //replensih queue if one was thrown out
 	      println("  trashed (old) " + i + "  from " + oldTweet.author)
 	    }
      
@@ -72,7 +79,7 @@ class TweetHandler (
 	  }
       
       h.curNumThreads -= 1
-      h.addTweetsToQueue
+      h.addTweetsToQueue //TODO maybe this is getting called a million times recursively, and that's causing the out-of-memory crashes
     } 
     
     def treeIsAcceptable(t: Tweet): Boolean = {

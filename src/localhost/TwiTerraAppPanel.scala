@@ -71,7 +71,13 @@ class TwiTerraAppPanel (val canvasSize: Dimension) extends JPanel
       }
       initLayerCount = layers.length
       wwd.getModel.setLayers(new LayerList(layers.toArray))
-        
+        /*
+      val aLayer: AnnotationLayer = new AnnotationLayer()
+	  aLayer.addAnnotation(new GlobeAnnotation("我与今天上午离开人世，再见，中国人", Position.fromDegrees(43.7340, 7.4211, 0), Font.decode("Arial-BOLD-12")));
+      aLayer.addAnnotation(new GlobeAnnotation("หาเสื้อสี #FF3300 มาใส่ดีกว่า", Position.fromDegrees(43.696, 7.27, 0), Font.decode("Arial-BOLD-12")));
+	  wwd.getModel.getLayers.add(wwd.getModel.getLayers.size, aLayer)
+     */
+     
     val globeActor = actor {
         loop {
           react {
@@ -102,7 +108,10 @@ class TwiTerraAppPanel (val canvasSize: Dimension) extends JPanel
             Thread.sleep(readDuration)
             displayTweet(t)
           }
-          case "animation complete" => globeActor ! "animation complete" //wait until all the animations here are done, then it will wake up and go
+          case "animation complete" => {
+            tweetHandler.addTweetsToQueue
+            globeActor ! "animation complete" //wait until all the animations here are done, then it will wake up and go
+          }
         }
       }
     }

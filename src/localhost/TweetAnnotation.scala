@@ -14,7 +14,7 @@ class TweetAnnotation (tweetText: String, var position: Position, val color: Col
       }}, position, new Font("Arial Unicode MS", Font.PLAIN, 12))
 {*/
 class TweetAnnotation (tweetText: String, var position: Position, val color: Color, val followThis: Boolean, val isNewTweet: Boolean) 
-    extends GlobeAnnotation(tweetText, position, new Font("Arial Unicode MS", Font.PLAIN, 12))
+    extends GlobeAnnotation(tweetText, position, Font.decode("SansSerif"))//, new Font("Arial Unicode MS", Font.PLAIN, 12))
 {
   customConfiguratins
   if (followThis) {
@@ -25,7 +25,6 @@ class TweetAnnotation (tweetText: String, var position: Position, val color: Col
     
   def customConfiguratins = {
     var annoAttr = getAttributes
-
     if (isNewTweet) {
       annoAttr.setBorderColor(Color.BLACK)
       annoAttr.setTextColor(Color.BLACK)
